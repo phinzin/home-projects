@@ -1,0 +1,9 @@
+{
+  "name": "home-health-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/home-health-e2e/src",
+  "implicitDependencies": ["home-health"],
+  "// targets": "to see all targets run: nx show project home-health-e2e --web",
+  "targets": {}
+}
