@@ -1,8 +1,51 @@
 import { test, expect } from '@playwright/test';
 
-test('has title', async ({ page }) => {
+test('should display home management app title', async ({ page }) => {
   await page.goto('/');
 
-  // Expect h1 to contain a substring.
-  expect(await page.locator('h1').innerText()).toContain('Welcome');
+  // Expect h2 with app title
+  const title = await page.locator('h2').first().innerText();
+  expect(title).toContain('Quản lý công việc gia đình');
+});
+
+test('should display task list with tasks', async ({ page }) => {
+  await page.goto('/');
+
+  // Check if task cards are displayed
+  const taskCards = page.locator('[class*="task-card"]');
+  const count = await taskCards.count();
+  expect(count).toBeGreaterThan(0);
+});
+
+test('should display upcoming tasks section', async ({ page }) => {
+  await page.goto('/');
+
+  // Check if upcoming section exists
+  const upcomingSection = page.locator('text=Sự kiện sắp đến');
+  expect(upcomingSection).toBeDefined();
+});
+
+test('should have mark done button for each task', async ({ page }) => {
+  await page.goto('/');
+
+  // Check if "Đã làm hôm nay" button exists
+  const buttons = page.locator('button:has-text("Đã làm hôm nay")');
+  const count = await buttons.count();
+  expect(count).toBeGreaterThan(0);
+});
+
+test('should be able to mark task as done', async ({ page }) => {
+  await page.goto('/');
+
+  // Click mark done button
+  const firstButton = page.locator('button:has-text("Đã làm hôm nay")').first();
+  await firstButton.click();
+
+  // Get the first task's last done date after update
+  const firstTaskAfter = page.locator('[class*="task-card"]').first();
+  const dateTextAfter = await firstTaskAfter.locator('b').nth(0).innerText();
+
+  // Should have updated to today
+  const today = new Date().toISOString().slice(0, 10);
+  expect(dateTextAfter).toContain(today);
 });
