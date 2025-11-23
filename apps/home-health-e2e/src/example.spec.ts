@@ -37,15 +37,23 @@ test('should have mark done button for each task', async ({ page }) => {
 test('should be able to mark task as done', async ({ page }) => {
   await page.goto('/');
 
+  // Get first task before update
+  const firstTaskBefore = page.locator('[class*="task-card"]').first();
+  const dateTextBefore = await firstTaskBefore.locator('b').nth(0).innerText();
+
   // Click mark done button
   const firstButton = page.locator('button:has-text("Đã làm hôm nay")').first();
   await firstButton.click();
 
-  // Get the first task's last done date after update
-  const firstTaskAfter = page.locator('[class*="task-card"]').first();
-  const dateTextAfter = await firstTaskAfter.locator('b').nth(0).innerText();
-
-  // Should have updated to today
+  // Wait for the date to change
   const today = new Date().toISOString().slice(0, 10);
+  const firstTaskAfter = page.locator('[class*="task-card"]').first();
+
+  // Use locator wait instead of timeout
+  await page.locator(`text=${today}`).waitFor();
+
+  // Get the updated date and verify it changed
+  const dateTextAfter = await firstTaskAfter.locator('b').nth(0).innerText();
+  expect(dateTextAfter !== dateTextBefore).toBeTruthy();
   expect(dateTextAfter).toContain(today);
 });
