@@ -1,0 +1,32 @@
+# Docker
+node_modules/
+npm-debug.log
+dist/
+.next/
+.nuxt/
+out/
+build/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Other
+.nx/
+.github/
+coverage/
+*.log
