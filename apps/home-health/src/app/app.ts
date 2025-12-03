@@ -1,13 +1,12 @@
 import { Component } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { TaskListComponent } from './task/task-list.component';
 
 @Component({
-  imports: [RouterModule, TaskListComponent],
+  imports: [RouterModule],
   selector: 'app-root',
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })
 export class App {
-  protected title = 'home-health';
+  protected title = 'Quản lý Công việc';
 }

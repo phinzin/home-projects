@@ -1,0 +1,47 @@
+<!-- Form thêm công việc mới -->
+<div class="bg-white p-6 rounded-xl shadow-lg mb-8 border-t-4 border-indigo-500">
+    <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">Thêm Công Việc Bảo Trì Mới</h2>
+    <form (submit)="addTask($event)" class="grid grid-cols-1 md:grid-cols-6 gap-4">
+        
+        <!-- Tên Công Việc -->
+        <div class="md:col-span-2">
+            <label for="taskName" class="block text-sm font-medium text-gray-700">Tên công việc</label>
+            <input type="text" id="taskName" #taskNameInput required placeholder="Ví dụ: Thay lõi lọc nước" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 mt-1">
+        </div>
+
+        <!-- Loại Định Kỳ -->
+        <div>
+            <label for="periodType" class="block text-sm font-medium text-gray-700">Loại định kỳ</label>
+            <select id="periodType" #periodTypeInput (change)="updatePeriodUnit(periodTypeInput.value)" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 mt-1">
+                <option value="time">Thời gian (Ngày/Tháng)</option>
+                <option value="mileage">Số KM (ODO)</option>
+            </select>
+        </div>
+
+        <!-- Giá trị Định Kỳ -->
+        <div>
+            <label for="periodValue" class="block text-sm font-medium text-gray-700">Giá trị</label>
+            <input type="number" id="periodValue" #periodValueInput required min="1" placeholder="Ví dụ: 3 hoặc 5000" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 mt-1">
+        </div>
+        
+        <!-- Đơn vị Định Kỳ -->
+        <div>
+            <label for="periodUnit" class="block text-sm font-medium text-gray-700">Đơn vị</label>
+            <select id="periodUnit" #periodUnitInput [disabled]="isMileageType()" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 mt-1">
+                @if (isMileageType()) {
+                    <option value="km">KM</option>
+                } @else {
+                    <option value="months">Tháng</option>
+                    <option value="days">Ngày</option>
+                }
+            </select>
+        </div>
+        
+        <!-- Nút Thêm -->
+        <div class="md:col-span-1 flex items-end">
+            <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition duration-200 flex items-center justify-center disabled:opacity-50">
+                Thêm
+            </button>
+        </div>
+    </form>
+</div>
