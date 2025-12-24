@@ -1,49 +1,322 @@
-<!-- Danh sách công việc -->
-<div class="bg-white p-6 rounded-xl shadow-lg">
-    <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">Danh Sách Công Việc</h2>
-    <div class="space-y-4">
-        <!-- @if (isLoading()) {
-            <p class="text-gray-500 italic p-4 text-center">Đang tải công việc...</p>
-        } @else  -->
-        @if (tasks().length === 0) {
-            <div class="p-4 bg-yellow-50 border-l-4 border-yellow-500 text-yellow-700 rounded-lg">
-                <p class="font-bold">Danh sách trống.</p>
-                <p>Hãy thêm công việc bảo trì đầu tiên của bạn!</p>
-            </div>
-        } @else {
-            @for (task of tasksWithStatus(); track task.id) {
-                <!-- Task Card Component -->
-                <div [class]="getCardClasses(task.status.color)" class="task-card p-5 rounded-xl shadow-md border-l-8 flex flex-col justify-between items-start transition duration-300 hover:shadow-lg">
-                    <div class="flex flex-col md:flex-row w-full justify-between items-start md:items-center min-w-0 mb-3 md:mb-0">
-                        <div class="flex-grow min-w-0">
-                            <h3 class="text-xl font-bold text-gray-900 truncate">{{ task.taskName }}</h3>
-                            <p class="text-sm text-gray-500 mt-1">{{ getPeriodText(task) }} | {{ getLastValueText(task) }}</p>
-                        </div>
-                        <div class="text-right mt-3 md:mt-0">
-                            <p class="text-sm font-medium text-gray-500">Tiếp theo:</p>
-                            <p class="text-lg font-bold text-gray-800">{{ task.status.nextDue }}</p>
-                        </div>
-                    </div>
-
-                    <!-- Progress Bar and Status -->
-                    <div class="w-full mt-3">
-                        <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                            <div [style.width.%]="task.status.progressPercent" [class]="getProgressBarClasses(task.status.color)" class="h-2.5 rounded-full transition-all duration-500"></div>
-                        </div>
-                        <div class="flex justify-between items-center mt-2">
-                            <span [class]="getBadgeClasses(task.status.color)" class="px-3 py-1 text-xs font-semibold rounded-full text-white">{{ task.status.text }}</span>
-                            <div class="flex space-x-2">
-                                <button (click)="openUpdateModal(task)" class="px-3 py-1 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition shadow-md">
-                                    Hoàn Thành
-                                </button>
-                                <button (click)="deleteTask(task.id)" class="px-3 py-1 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition shadow-md">
-                                    Xóa
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            }
-        }
+<!-- Dashboard Stats -->
+@if (hasAnyTasks()) {
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+    <!-- Total -->
+    <div class="bg-white rounded-xl p-4 shadow-md border-l-4 border-indigo-500">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm text-gray-500">Tổng cộng</p>
+          <p class="text-2xl font-bold text-gray-800">{{ stats().total }}</p>
+        </div>
+        <div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+          <span class="text-xl">📋</span>
+        </div>
+      </div>
     </div>
+
+    <!-- Overdue -->
+    <div class="bg-white rounded-xl p-4 shadow-md border-l-4 border-red-500 cursor-pointer hover:shadow-lg transition-shadow"
+         (click)="filterStatus.set(filterStatus() === 'overdue' ? 'all' : 'overdue')"
+         [class.ring-2]="filterStatus() === 'overdue'"
+         [class.ring-red-500]="filterStatus() === 'overdue'">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm text-gray-500">Quá hạn</p>
+          <p class="text-2xl font-bold text-red-600">{{ stats().overdue }}</p>
+        </div>
+        <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+          <span class="text-xl">🔴</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Due Soon -->
+    <div class="bg-white rounded-xl p-4 shadow-md border-l-4 border-yellow-500 cursor-pointer hover:shadow-lg transition-shadow"
+         (click)="filterStatus.set(filterStatus() === 'due-soon' ? 'all' : 'due-soon')"
+         [class.ring-2]="filterStatus() === 'due-soon'"
+         [class.ring-yellow-500]="filterStatus() === 'due-soon'">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm text-gray-500">Sắp đến hạn</p>
+          <p class="text-2xl font-bold text-yellow-600">{{ stats().dueSoon }}</p>
+        </div>
+        <div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+          <span class="text-xl">🟡</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- On Track -->
+    <div class="bg-white rounded-xl p-4 shadow-md border-l-4 border-green-500 cursor-pointer hover:shadow-lg transition-shadow"
+         (click)="filterStatus.set(filterStatus() === 'on-track' ? 'all' : 'on-track')"
+         [class.ring-2]="filterStatus() === 'on-track'"
+         [class.ring-green-500]="filterStatus() === 'on-track'">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm text-gray-500">Đúng hạn</p>
+          <p class="text-2xl font-bold text-green-600">{{ stats().onTrack }}</p>
+        </div>
+        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+          <span class="text-xl">🟢</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ODO Update Card -->
+  <div class="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl p-4 mb-6 shadow-lg text-white">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+          <span class="text-2xl">🚗</span>
+        </div>
+        <div>
+          <p class="text-sm text-white/80">Số KM hiện tại (ODO)</p>
+          <p class="text-xl font-bold">{{ currentOdo() > 0 ? (currentOdo() | number:'1.0-0':'vi') + ' KM' : 'Chưa cập nhật' }}</p>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <input
+          type="number"
+          [ngModel]="currentOdoInput()"
+          (ngModelChange)="currentOdoInput.set($event)"
+          placeholder="Nhập số KM mới"
+          class="px-4 py-2 rounded-lg text-gray-800 w-40 focus:ring-2 focus:ring-white/50"
+          min="0"
+        >
+        <button
+          (click)="updateCurrentOdo()"
+          [disabled]="!currentOdoInput()"
+          class="px-4 py-2 bg-white text-indigo-600 font-semibold rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Cập nhật
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Task List Section -->
+<div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+  <!-- Header with Search & Filters -->
+  <div class="p-4 border-b border-gray-100">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+        <span>📝</span> Danh Sách Công Việc
+        @if (filterStatus() !== 'all' || filterCategory() !== 'all') {
+          <button
+            (click)="filterStatus.set('all'); filterCategory.set('all')"
+            class="text-sm font-normal text-indigo-600 hover:text-indigo-800"
+          >
+            (Xóa bộ lọc)
+          </button>
+        }
+      </h2>
+
+      <!-- Search -->
+      <div class="relative flex-1 max-w-xs">
+        <input
+          type="text"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
+          placeholder="Tìm kiếm..."
+          class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+        >
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Filters Row -->
+    @if (hasAnyTasks()) {
+      <div class="flex flex-wrap gap-2 mt-4">
+        <!-- Category Filter -->
+        <select
+          [ngModel]="filterCategory()"
+          (ngModelChange)="filterCategory.set($event)"
+          class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+        >
+          <option value="all">📁 Tất cả danh mục</option>
+          @for (cat of categories; track cat.value) {
+            <option [value]="cat.value">{{ cat.icon }} {{ cat.label }}</option>
+          }
+        </select>
+
+        <!-- Sort -->
+        <select
+          [ngModel]="sortBy()"
+          (ngModelChange)="sortBy.set($event)"
+          class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+        >
+          <option value="urgency">🔥 Sắp xếp: Độ ưu tiên</option>
+          <option value="name">🔤 Sắp xếp: Tên A-Z</option>
+          <option value="category">📁 Sắp xếp: Danh mục</option>
+          <option value="date">📅 Sắp xếp: Mới nhất</option>
+        </select>
+      </div>
+    }
+  </div>
+
+  <!-- Task Cards -->
+  <div class="p-4">
+    @if (tasksWithStatus().length === 0) {
+      <div class="text-center py-12">
+        <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <span class="text-4xl">📭</span>
+        </div>
+        @if (hasAnyTasks()) {
+          <h3 class="text-lg font-semibold text-gray-700 mb-2">Không tìm thấy kết quả</h3>
+          <p class="text-gray-500">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
+        } @else {
+          <h3 class="text-lg font-semibold text-gray-700 mb-2">Chưa có công việc nào</h3>
+          <p class="text-gray-500">Nhấn vào "Thêm Công Việc Mới" để bắt đầu theo dõi bảo trì!</p>
+        }
+      </div>
+    } @else {
+      <div class="space-y-4">
+        @for (task of tasksWithStatus(); track task.id) {
+          <!-- Task Card -->
+          <div
+            [class]="getCardClasses(task.status.color)"
+            class="task-card p-4 rounded-xl shadow-md border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5"
+          >
+            <!-- Top Row: Name, Category, Status -->
+            <div class="flex flex-col md:flex-row md:items-start justify-between gap-3 mb-3">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-lg" [title]="getCategoryInfo(task.category).label">
+                    {{ getCategoryInfo(task.category).icon }}
+                  </span>
+                  <h3 class="text-lg font-bold text-gray-900 truncate">{{ task.taskName }}</h3>
+                </div>
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
+                  <span class="flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Định kỳ: {{ getPeriodText(task) }}
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Lần cuối: {{ getLastValueText(task) }}
+                  </span>
+                </div>
+                @if (task.notes) {
+                  <p class="text-sm text-gray-400 mt-1 italic truncate">{{ task.notes }}</p>
+                }
+              </div>
+
+              <!-- Next Due -->
+              <div class="text-right shrink-0">
+                <p class="text-xs text-gray-500 uppercase tracking-wide">Tiếp theo</p>
+                <p class="text-lg font-bold text-gray-800">{{ task.status.nextDue }}</p>
+              </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="mb-3">
+              <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div
+                  [style.width.%]="task.status.progressPercent"
+                  [class]="getProgressBarClasses(task.status.color)"
+                  class="h-2 rounded-full transition-all duration-500"
+                ></div>
+              </div>
+            </div>
+
+            <!-- Bottom Row: Status Badge & Actions -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <span
+                [class]="getBadgeClasses(task.status.color)"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full text-white w-fit"
+              >
+                <span>{{ getStatusIcon(task.status.color) }}</span>
+                {{ task.status.text }}
+              </span>
+
+              <div class="flex items-center gap-2">
+                <!-- Edit Button -->
+                <button
+                  (click)="editTask(task)"
+                  class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                  title="Chỉnh sửa"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                  </svg>
+                </button>
+
+                <!-- Complete Button -->
+                <button
+                  (click)="openCompleteModal(task)"
+                  class="px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-sm flex items-center gap-1.5"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                  </svg>
+                  Hoàn thành
+                </button>
+
+                <!-- Delete Button -->
+                <button
+                  (click)="openDeleteModal(task)"
+                  class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Xóa"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+@if (deleteModalOpen()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" (click)="closeDeleteModal()"></div>
+    <div class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-scale-in">
+      <div class="flex justify-center mb-4">
+        <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+          <span class="text-3xl">🗑️</span>
+        </div>
+      </div>
+      <h3 class="text-xl font-bold text-gray-900 text-center mb-2">Xoa cong viec?</h3>
+      <p class="text-gray-600 text-center mb-6">
+        Ban co chac chan muon xoa "{{ taskToDelete()?.taskName }}"? Hanh dong nay khong the hoan tac.
+      </p>
+      <div class="flex gap-3">
+        <button (click)="closeDeleteModal()" class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50">Huy</button>
+        <button (click)="confirmDelete()" class="flex-1 px-4 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700">Xoa</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Complete Task Modal -->
+@if (completeModalOpen() && taskToComplete()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" (click)="closeCompleteModal()"></div>
+    <div class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-scale-in">
+      <div class="flex justify-center mb-4">
+        <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+          <span class="text-3xl">✓</span>
+        </div>
+      </div>
+      <h3 class="text-xl font-bold text-gray-900 text-center mb-2">Hoan thanh cong viec</h3>
+      <p class="text-indigo-600 font-semibold text-center mb-4">{{ taskToComplete()?.taskName }}</p>
+      <div class="flex gap-3">
+        <button (click)="closeCompleteModal()" class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50">Huy</button>
+        <button (click)="confirmComplete({})" class="flex-1 px-4 py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700">Xac nhan</button>
+      </div>
+    </div>
+  </div>
+}

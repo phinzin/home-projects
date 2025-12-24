@@ -5,10 +5,8 @@ import { ListTask } from './components/list-task/list-task';
 
 @Component({
   selector: 'app-home',
-  imports: [CommonModule,
-    NewTask,
-    ListTask
-  ],
+  standalone: true,
+  imports: [CommonModule, NewTask, ListTask],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })
