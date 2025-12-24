@@ -1,18 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
   <head>
     <meta charset="utf-8" />
-    <title>home-health</title>
+    <title>Sổ Theo Dõi Bảo Trì - Home Health</title>
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Ứng dụng quản lý công việc bảo trì định kỳ cho nhà cửa và xe cộ" />
+    <meta name="theme-color" content="#6366f1" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
+
+    <!-- Tailwind CSS with dark mode -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                50: '#eef2ff',
+                100: '#e0e7ff',
+                200: '#c7d2fe',
+                300: '#a5b4fc',
+                400: '#818cf8',
+                500: '#6366f1',
+                600: '#4f46e5',
+                700: '#4338ca',
+                800: '#3730a3',
+                900: '#312e81',
+              }
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- Google Fonts -->
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+      body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      }
     </style>
   </head>
-  <body>
+  <body class="antialiased">
     <app-root></app-root>
+    <noscript>
+      <div style="padding: 20px; text-align: center; font-family: sans-serif;">
+        <h1>JavaScript Required</h1>
+        <p>Vui lòng bật JavaScript để sử dụng ứng dụng này.</p>
+      </div>
+    </noscript>
   </body>
 </html>

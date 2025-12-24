@@ -1,127 +1,153 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Task } from 'apps/home-health/src/app/models/maintenance-tracker.model';
+import { FormsModule } from '@angular/forms';
+import { Task, TaskCategory, CATEGORY_CONFIG } from '../../../../models/maintenance-tracker.model';
+import { TaskService } from '../../../../services/task.service';
+import { ToastService } from '../../../../services/toast.service';
 
 @Component({
   selector: 'app-new-task',
-  imports: [CommonModule],
+  standalone: true,
+  imports: [CommonModule, FormsModule],
   templateUrl: './new-task.html',
   styleUrl: './new-task.scss',
 })
 export class NewTask {
+  private taskService = inject(TaskService);
+  private toastService = inject(ToastService);
 
+  // Form state
+  taskName = '';
+  periodType: 'time' | 'mileage' = 'time';
+  periodValue: number | null = null;
+  periodUnit: 'months' | 'days' | 'km' = 'months';
+  category: TaskCategory = 'other';
+  notes = '';
+
+  // UI state
   isMileageType = signal(false);
+  isFormExpanded = signal(false);
+  isEditing = signal(false);
+  editingTaskId = signal<string | null>(null);
 
-  // --- UI Utility Methods ---
+  // Category options
+  categories = Object.entries(CATEGORY_CONFIG).map(([key, config]) => ({
+    value: key as TaskCategory,
+    ...config
+  }));
 
-    updatePeriodUnit(type: string) {
-        this.isMileageType.set(type === 'mileage');
+  constructor() {
+    // Watch for editing task changes
+    effect(() => {
+      const editingTask = this.taskService.editingTaskData();
+      if (editingTask) {
+        this.populateForm(editingTask);
+        this.isEditing.set(true);
+        this.isFormExpanded.set(true);
+        this.editingTaskId.set(editingTask.id);
+      }
+    }, { allowSignalWrites: true });
+  }
+
+  private populateForm(task: Task): void {
+    this.taskName = task.taskName;
+    this.periodType = task.periodType;
+    this.periodValue = task.periodValue;
+    this.periodUnit = task.periodUnit;
+    this.category = task.category;
+    this.notes = task.notes || '';
+    this.isMileageType.set(task.periodType === 'mileage');
+  }
+
+  updatePeriodUnit(type: string): void {
+    this.periodType = type as 'time' | 'mileage';
+    this.isMileageType.set(type === 'mileage');
+    if (type === 'mileage') {
+      this.periodUnit = 'km';
+    } else {
+      this.periodUnit = 'months';
+    }
+  }
+
+  toggleFormExpand(): void {
+    if (this.isEditing()) {
+      this.cancelEdit();
+    } else {
+      this.isFormExpanded.update(v => !v);
+    }
+  }
+
+  cancelEdit(): void {
+    this.resetForm();
+    this.taskService.clearEditingTask();
+    this.isEditing.set(false);
+    this.editingTaskId.set(null);
+    this.isFormExpanded.set(false);
+  }
+
+  submitTask(event: Event): void {
+    event.preventDefault();
+
+    if (!this.taskName.trim() || !this.periodValue || this.periodValue <= 0) {
+      this.toastService.error('Vui lòng điền đầy đủ thông tin hợp lệ');
+      return;
     }
 
-    getTodayDateString(): string {
-        return new Date().toISOString().split('T')[0];
+    const now = Date.now();
+
+    if (this.isEditing() && this.editingTaskId()) {
+      // Update existing task
+      const success = this.taskService.updateTask(this.editingTaskId()!, {
+        taskName: this.taskName.trim(),
+        periodType: this.periodType,
+        periodValue: this.periodValue,
+        periodUnit: this.periodUnit,
+        category: this.category,
+        notes: this.notes.trim() || undefined
+      });
+
+      if (success) {
+        this.toastService.success('Đã cập nhật công việc thành công!');
+        this.cancelEdit();
+      } else {
+        this.toastService.error('Không thể cập nhật công việc');
+      }
+    } else {
+      // Add new task
+      const taskData: Omit<Task, 'id' | 'timestamp' | 'history'> = {
+        taskName: this.taskName.trim(),
+        periodType: this.periodType,
+        periodValue: this.periodValue,
+        periodUnit: this.periodUnit,
+        category: this.category,
+        notes: this.notes.trim() || undefined,
+        lastCompletedDate: this.periodType === 'time' ? now : null,
+        lastCompletedValue: this.periodType === 'mileage' ? 0 : null
+      };
+
+      this.taskService.addTask(taskData);
+      this.toastService.success('Đã thêm công việc mới!');
+
+      if (this.periodType === 'mileage') {
+        this.toastService.info('Nhớ cập nhật số KM hiện tại để tính toán chính xác!', 5000);
+      }
+
+      this.resetForm();
+      this.isFormExpanded.set(false);
     }
+  }
 
-    getPeriodText(task: Task): string {
-        return task.periodType === 'time'
-            ? `Định kỳ: ${task.periodValue} ${task.periodUnit === 'months' ? 'Tháng' : 'Ngày'}`
-            : `Định kỳ: ${task.periodValue} KM`;
-    }
+  private resetForm(): void {
+    this.taskName = '';
+    this.periodType = 'time';
+    this.periodValue = null;
+    this.periodUnit = 'months';
+    this.category = 'other';
+    this.notes = '';
+    this.isMileageType.set(false);
+  }
 
-    getLastValueText(task: Task): string {
-        if (task.periodType === 'time' && task.lastCompletedDate) {
-            return `Lần cuối: ${new Date(task.lastCompletedDate).toLocaleDateString('vi-VN')}`;
-        }
-        if (task.periodType === 'mileage' && task.lastCompletedValue !== null) {
-            return `Lần cuối: ${task.lastCompletedValue} KM`;
-        }
-        return 'Lần cuối: Chưa có dữ liệu';
-    }
-
-    getCardClasses(color: string): string {
-        const colorMap: { [key: string]: string } = {
-            red: 'border-red-500 bg-red-500/10',
-            yellow: 'border-yellow-500 bg-yellow-500/10',
-            green: 'border-green-500 bg-green-500/10',
-            gray: 'border-gray-500 bg-gray-50'
-        };
-        return colorMap[color] || 'border-gray-500 bg-gray-50';
-    }
-
-    getBadgeClasses(color: string): string {
-        const colorMap: { [key: string]: string } = {
-            red: 'bg-red-500',
-            yellow: 'bg-yellow-500',
-            green: 'bg-green-500',
-            gray: 'bg-gray-500'
-        };
-        return colorMap[color] || 'bg-gray-500';
-    }
-
-    getProgressBarClasses(color: string): string {
-        const colorMap: { [key: string]: string } = {
-            red: 'bg-red-500',
-            yellow: 'bg-yellow-500',
-            green: 'bg-green-500',
-            gray: 'bg-gray-400'
-        };
-        return colorMap[color] || 'bg-gray-400';
-    }
-
-    updateTask(event: Event){
-      event.preventDefault();
-      console.log('Task updated');
-    }
-
-    addTask(event: Event) {
-        event.preventDefault();
-        console.log('Add task form submitted');
-        // const form = event.target as HTMLFormElement;
-        // const taskNameInput = form.querySelector('#taskName') as HTMLInputElement;
-        // const periodTypeInput = form.querySelector('#periodType') as HTMLSelectElement;
-        // const periodValueInput = form.querySelector('#periodValue') as HTMLInputElement;
-        // const periodUnitInput = form.querySelector('#periodUnit') as HTMLSelectElement;
-
-        // if (!this.db || !this.userId()) {
-        //     console.error("Firebase not ready.");
-        //     return;
-        // }
-
-        // const taskName = taskNameInput.value.trim();
-        // const periodType = periodTypeInput.value as 'time' | 'mileage';
-        // const periodValue = parseInt(periodValueInput.value);
-        // const periodUnit = periodUnitInput.value as 'months' | 'days' | 'km';
-
-        // if (!taskName || isNaN(periodValue) || periodValue <= 0) return;
-
-        // const now = Date.now();
-
-        // const taskData: Omit<Task, 'id'> = {
-        //     taskName,
-        //     periodType,
-        //     periodValue,
-        //     periodUnit,
-        //     // For time-based, use current timestamp. For mileage, use 0 and prompt for update.
-        //     lastCompletedDate: periodType === 'time' ? now : null,
-        //     lastCompletedValue: periodType === 'mileage' ? 0 : null,
-        //     timestamp: now,
-        // };
-
-        // const path = `artifacts/${appId}/users/${this.userId()}/maintenance_tasks`;
-        // const docRef = doc(collection(this.db, path));
-
-        // setDoc(docRef, taskData)
-        //     .then(() => {
-        //         form.reset();
-        //         this.isMileageType.set(false); // Reset unit display
-        //         if (periodType === 'mileage') {
-        //             this.showInfoModal("Lưu ý về KM", "Công việc dựa trên KM đã được thêm. Vui lòng cập nhật Số KM (ODO) Hiện Tại của xe bạn để tính toán chính xác!");
-        //         }
-        //     })
-        //     .catch(e => {
-        //         console.error("Error adding document to Firestore:", e);
-        //         this.showInfoModal("Lỗi", "Lỗi khi lưu công việc. Vui lòng kiểm tra console.");
-        //     });
-    }
-
+  getCategoryIcon(cat: TaskCategory): string {
+    return CATEGORY_CONFIG[cat].icon;
+  }
 }
